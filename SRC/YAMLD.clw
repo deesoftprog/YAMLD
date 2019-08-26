@@ -1,6 +1,6 @@
 !-----------------------------
-! YAMLD Реализация чтение конфигурации из файла в формате аля YAMLD
-! dee2019-08-17
+! YAMLD Р РµР°Р»РёР·Р°С†РёСЏ С‡С‚РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РёР· С„Р°Р№Р»Р° РІ С„РѕСЂРјР°С‚Рµ Р°Р»СЏ YAMLD
+! dee2019-08-26
 ! dee2019-08-11
 ! dee2019-08-09
 !-----------------------------
@@ -13,6 +13,7 @@
 YAMLD.Construct    Procedure()
                    Code
                    self.YAMLD_cfgQ &= new YAMLD_cfgQ_TYPE
+                   self.YAMLD_DimQ &= new YAMLD_DimQ_TYPE
                    Return
 !****************************************************************************************************
 YAMLD.Destruct     Procedure()
@@ -21,10 +22,14 @@ YAMLD.Destruct     Procedure()
                       DISPOSE(Self.YAMLD_cfgQ)
                       Self.YAMLD_cfgQ &= Null
                    end
+                   if ~(Self.YAMLD_DimQ &= null)
+                      DISPOSE(Self.YAMLD_DimQ)
+                      Self.YAMLD_DimQ &= Null
+                   end
                    Return
 !****************************************************************************************************     
 YAMLD.YAMLD_Rcommand  Procedure(string _param)
-                   !---получить значение параметра или ветки
+                   !---РїРѕР»СѓС‡РёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РїР°СЂР°РјРµС‚СЂР° РёР»Рё РІРµС‚РєРё
                    code
                    if records(self.YAMLD_cfgQ)
                       self.YAMLD_cfgQ.Node = clip(upper(_param))
@@ -34,7 +39,7 @@ YAMLD.YAMLD_Rcommand  Procedure(string _param)
                    return(clip(self.YAMLD_cfgQ.Value))
 !****************************************************************************************************
 YAMLD.YAMLD_Scommand Procedure(string _param, string _value)
-                   !---задать значение параметра или ветки
+                   !---Р·Р°РґР°С‚СЊ Р·РЅР°С‡РµРЅРёРµ РїР°СЂР°РјРµС‚СЂР° РёР»Рё РІРµС‚РєРё
 RetVal             long
                    code     
                    if records(self.YAMLD_cfgQ)
@@ -52,7 +57,7 @@ RetVal             long
 !****************************************************************************************************
 YAMLD.YAMLD_init   Procedure(String _InFile,<string _Sep>,<string _SComment>,byte _debug=0)
 RetC               long
-                   !---инициализация файла YAML
+                   !---РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ С„Р°Р№Р»Р° YAML
                    code
                    self.p_debug = _debug
                    if omitted(_SComment)
@@ -70,13 +75,26 @@ RetC               long
                    retC += self.YAMLD_CfgHeirs()
                    Return(retC)
 !****************************************************************************************************
+YAMLD.YAMLD_GetIndex   procedure(string _param)
+                   !---РџРѕР»СѓС‡РёС‚СЊ СЂР°Р·РјРµСЂ РјР°СЃСЃРёРІР° СЌР»РµРјРµРЅС‚РѕРІ С‚РµРіРѕРІ "-"
+                   code
+                   if records(self.YAMLD_DimQ)
+                      self.YAMLD_DimQ.Node = clip(upper(_param))
+                      get(self.YAMLD_DimQ,+self.YAMLD_DimQ.Node)
+                      if errorcode()
+                         clear(self.YAMLD_DimQ.size)
+                      else
+                      end
+                   end
+                   return(self.YAMLD_DimQ.size)
+!****************************************************************************************************
 YAMLD.YAMLD_GetFieldp  Procedure(String Stro, Short Num, String Sep, <Byte QuoteFlag>)
 bpoz                SHORT,auto
 epoz                SHORT,auto
-loc:Str             STRING(size(Stro))       !выходная строка
-loc:sep             string(1),auto           !сепаратор
-loc:Quote           string('"')              !кавычка
-loc:Quote2          string('''')             !кавычка
+loc:Str             STRING(size(Stro))       !РІС‹С…РѕРґРЅР°СЏ СЃС‚СЂРѕРєР°
+loc:sep             string(1),auto           !СЃРµРїР°СЂР°С‚РѕСЂ
+loc:Quote           string('"')              !РєР°РІС‹С‡РєР°
+loc:Quote2          string('''')             !РєР°РІС‹С‡РєР°
                     CODE
                     if omitted(3)
                        QuoteFlag = 0
@@ -97,7 +115,7 @@ loc:Quote2          string('''')             !кавычка
                           loc:Str = sub(Stro,1,epoz-bpoz)
                        end
                     elsif Num > 1
-                       !--- Цикл поиска начальной точки
+                       !--- Р¦РёРєР» РїРѕРёСЃРєР° РЅР°С‡Р°Р»СЊРЅРѕР№ С‚РѕС‡РєРё
                        loop
                           epoz = InString(loc:sep,Stro,1,bpoz)
                           if epoz = 0
@@ -117,12 +135,12 @@ loc:Quote2          string('''')             !кавычка
                           loc:Str = sub(Stro,bpoz,epoz-bpoz)
                        end
                     end
-                    case QuoteFlag   ! Если строки в кавычках (убрать кавычки)
-                    of 1   !двойная кавычка
+                    case QuoteFlag   ! Р•СЃР»Рё СЃС‚СЂРѕРєРё РІ РєР°РІС‹С‡РєР°С… (СѓР±СЂР°С‚СЊ РєР°РІС‹С‡РєРё)
+                    of 1   !РґРІРѕР№РЅР°СЏ РєР°РІС‹С‡РєР°
                        if sub(loc:str,1,1) = loc:Quote and sub(loc:str,len(clip(loc:Str)),1) = loc:Quote
                           loc:Str = sub(loc:str,2,len(clip(loc:Str))-2)
                        end
-                    of 2   !одинарная кавычка
+                    of 2   !РѕРґРёРЅР°СЂРЅР°СЏ РєР°РІС‹С‡РєР°
                        if sub(loc:str,1,1) = loc:Quote2 and sub(loc:str,len(clip(loc:Str)),1) = loc:Quote2
                           loc:Str = sub(loc:str,2,len(clip(loc:Str))-2)
                        end
@@ -130,7 +148,7 @@ loc:Quote2          string('''')             !кавычка
                     return(clip(loc:Str))
 !****************************************************************************************************
 YAMLD.YAMLD_CfgLoadfile  Procedure(String _InFile)                  
-                    !---прочитать файл в формате YAML
+                    !---РїСЂРѕС‡РёС‚Р°С‚СЊ С„Р°Р№Р» РІ С„РѕСЂРјР°С‚Рµ YAML
 RC                  long
 FINI_NAME           CSTRING(FILE:MaxFileName),static
 FINI                FILE,PRE(FINI),DRIVER('ASCII'),NAME(FINI_NAME)
@@ -138,10 +156,10 @@ FINI                FILE,PRE(FINI),DRIVER('ASCII'),NAME(FINI_NAME)
 RECORD                   STRING(YAMLD_MaxLenFLDFile)
                        end
                     end
-SEP_C               EQUATE('[')              !начало секции в cfg файле
-SEP_CE              EQUATE(']')              !конец секции в cfg файле
-SEP_BD              EQUATE('---')            !начало документа
-SEP_ED              EQUATE('...')            !конец документа
+SEP_C               EQUATE('[')              !РЅР°С‡Р°Р»Рѕ СЃРµРєС†РёРё РІ cfg С„Р°Р№Р»Рµ
+SEP_CE              EQUATE(']')              !РєРѕРЅРµС† СЃРµРєС†РёРё РІ cfg С„Р°Р№Р»Рµ
+SEP_BD              EQUATE('---')            !РЅР°С‡Р°Р»Рѕ РґРѕРєСѓРјРµРЅС‚Р°
+SEP_ED              EQUATE('...')            !РєРѕРЅРµС† РґРѕРєСѓРјРµРЅС‚Р°
 FL_REad             byte
 LOCPARAM            STRING(YAMLD_MaxLenFLD)
                     code
@@ -153,10 +171,10 @@ LOCPARAM            STRING(YAMLD_MaxLenFLD)
                     LOOP
                         i#+=1    
                         NEXT(FINI)
-                        IF ERRORCODE()          then BREAK. !это ошибка
-                        IF clip(FINI:RECORD)='' then CYCLE. !это пустая строка
-                        IF FINI:RECORD[1]=self.YAMLD_Comment then CYCLE. !это комментарий
-                        if FINI:RECORD[1]=SEP_C and SUB(clip(FINI:RECORD),-1,1)=SEP_CE then CYCLE.  !проверка на кв. скобки
+                        IF ERRORCODE()          then BREAK. !СЌС‚Рѕ РѕС€РёР±РєР°
+                        IF clip(FINI:RECORD)='' then CYCLE. !СЌС‚Рѕ РїСѓСЃС‚Р°СЏ СЃС‚СЂРѕРєР°
+                        IF FINI:RECORD[1]=self.YAMLD_Comment then CYCLE. !СЌС‚Рѕ РєРѕРјРјРµРЅС‚Р°СЂРёР№
+                        if FINI:RECORD[1]=SEP_C and SUB(clip(FINI:RECORD),-1,1)=SEP_CE then CYCLE.  !РїСЂРѕРІРµСЂРєР° РЅР° РєРІ. СЃРєРѕР±РєРё
                         if FINI:RECORD[1 : 3]=SEP_BD
                            FL_REad=true
                            CYCLE
@@ -168,11 +186,11 @@ LOCPARAM            STRING(YAMLD_MaxLenFLD)
                         !---
                         LOCPARAM = CLIP(FINI:RECORD)
                         if instring(self.YAMLD_Comment,LOCPARAM)
-                           !---получили чистое значение без коментариев (реагирует на первый коментарий)
+                           !---РїРѕР»СѓС‡РёР»Рё С‡РёСЃС‚РѕРµ Р·РЅР°С‡РµРЅРёРµ Р±РµР· РєРѕРјРµРЅС‚Р°СЂРёРµРІ (СЂРµР°РіРёСЂСѓРµС‚ РЅР° РїРµСЂРІС‹Р№ РєРѕРјРµРЅС‚Р°СЂРёР№)
                            LOCPARAM = self.YAMLD_GetFieldp(CLIP(LOCPARAM),1,self.YAMLD_Comment,0)
                         end
-                        if clip(LOCPARAM)='' then CYCLE.    !удалим пустые строки
-                        !---подсчет отступа
+                        if clip(LOCPARAM)='' then CYCLE.    !СѓРґР°Р»РёРј РїСѓСЃС‚С‹Рµ СЃС‚СЂРѕРєРё
+                        !---РїРѕРґСЃС‡РµС‚ РѕС‚СЃС‚СѓРїР°
                         j#=0
                         loop j#=1 to size(FINI:RECORD)
                              if val(FINI:RECORD[j#])<>32
@@ -192,24 +210,27 @@ LOCPARAM            STRING(YAMLD_MaxLenFLD)
                     RETURN(RC)
 !****************************************************************************************************
 YAMLD.YAMLD_CfgDeSerelize Procedure                               
-                    !---1 этап обработки (получение цепочек вхожденией и данных)
+                    !---1 СЌС‚Р°Рї РѕР±СЂР°Р±РѕС‚РєРё (РїРѕР»СѓС‡РµРЅРёРµ С†РµРїРѕС‡РµРє РІС…РѕР¶РґРµРЅРёРµР№ Рё РґР°РЅРЅС‹С…)
 fl_root             long
 fl_parent           long
 fl_Heits            long
 fl_MultiStr         long
 fl_MultiStrType     byte
 fl_json             byte
+fl_dim              byte
 LastNode            like(self.YAMLD_cfgQ.Node),dim(255)
 LastParent          long
 LastHeits           long
 LastMultiStr        long
 LastJson            long
+LastDim             long
 SEP_D               string(1)
                     MAP
-                       GetPathNode(long _parent),string  !получить путь поиска элемента
-                       isParentHeirs(string _value),long !получить код наследуемой группы родителя  
-                       isParentMultiStr(string _value),long !получить код наследуемой группы родителя  
-                       isParentJson(string _value),long !получить код наследуемой группы родителя  
+                       GetPathNode(long _parent),string  !РїРѕР»СѓС‡РёС‚СЊ РїСѓС‚СЊ РїРѕРёСЃРєР° СЌР»РµРјРµРЅС‚Р°
+                       isParentHeirs(string _value),long !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ  
+                       isParentMultiStr(string _value),long !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ  
+                       isParentJson(string _value),long !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ  
+                       isParentDim(string _value),long !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ  
                     end
 Ndx_J               long
                     code
@@ -221,16 +242,12 @@ Ndx_J               long
                             get(self.YAMLD_cfgQ,Ndx_J)
                             if self.YAMLD_cfgQ.Indent=1
                                fl_root = true
-                               fl_parent=1
-                               LastParent=1
+                               fl_parent=1;     LastParent=1
                                !---
-                               fl_Heits=0
-                               LastHeits=0
-                               fl_MultiStr=0
-                               LastMultiStr=0
-                               fl_MultiStrType=0
-                               fl_json=0
-                               LastJson=0
+                               fl_Heits=0;      LastHeits=0
+                               fl_MultiStr=0;   LastMultiStr=0;   fl_MultiStrType=0
+                               fl_json=0;       LastJson=0
+                               fl_Dim=0;        LastDim=0
                                !---
                                clear(LastNode)
                             elsif self.YAMLD_cfgQ.Indent>1
@@ -258,6 +275,11 @@ Ndx_J               long
                                end 
                                LastJson = fl_Json
                                !---
+                               if fl_Dim=0
+                                  fl_Dim = isParentDim(clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,1,SEP_D,0))))
+                               end 
+                               LastDim = fl_Dim
+                               !---
                                put(self.YAMLD_cfgQ)
                                fl_root = FALSE
                             elsif fl_parent
@@ -265,26 +287,31 @@ Ndx_J               long
                                   LastNode[fl_parent] = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                   if fl_parent=1
                                      self.YAMLD_cfgQ.Node = clip(GetPathNode(LastParent)) 
-                                  elsif LastParent > fl_parent      !возврат от child
+                                  elsif LastParent > fl_parent      !РІРѕР·РІСЂР°С‚ РѕС‚ child
                                      LastNode[LastParent] = ''
                                      !---
-                                     if LastHeits = fl_Heits        !возвратились на предыдущий уровен сбрасываем
+                                     if LastHeits = fl_Heits        !РІРѕР·РІСЂР°С‚РёР»РёСЃСЊ РЅР° РїСЂРµРґС‹РґСѓС‰РёР№ СѓСЂРѕРІРµРЅ СЃР±СЂР°СЃС‹РІР°РµРј
                                         fl_Heits = 0
                                         LastParent = 0
                                      end
                                      !---
-                                     if LastMultiStr = fl_MultiStr  !возвратились на предыдущий уровен сбрасываем
+                                     if LastMultiStr = fl_MultiStr  !РІРѕР·РІСЂР°С‚РёР»РёСЃСЊ РЅР° РїСЂРµРґС‹РґСѓС‰РёР№ СѓСЂРѕРІРµРЅ СЃР±СЂР°СЃС‹РІР°РµРј
                                         fl_MultiStr = 0
                                         LastMultiStr = 0
                                      end
                                      !---
-                                     if Lastjson = fl_json          !возвратились на предыдущий уровен сбрасываем
+                                     if Lastjson = fl_json          !РІРѕР·РІСЂР°С‚РёР»РёСЃСЊ РЅР° РїСЂРµРґС‹РґСѓС‰РёР№ СѓСЂРѕРІРµРЅ СЃР±СЂР°СЃС‹РІР°РµРј
                                         fl_json = 0
                                         Lastjson = 0
                                      end
                                      !---
+                                     if LastDim = fl_Dim            !РІРѕР·РІСЂР°С‚РёР»РёСЃСЊ РЅР° РїСЂРµРґС‹РґСѓС‰РёР№ СѓСЂРѕРІРµРЅ СЃР±СЂР°СЃС‹РІР°РµРј
+                                        fl_Dim = 0
+                                        LastDim = 0
+                                     end
+                                     !---
                                      self.YAMLD_cfgQ.Node = clip(GetPathNode(fl_parent)) &'/'& self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
-                                  elsif LastParent < fl_parent      !переход к child
+                                  elsif LastParent < fl_parent      !РїРµСЂРµС…РѕРґ Рє child
                                      self.YAMLD_cfgQ.Node = clip(GetPathNode(fl_parent)) &'/'& self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                   end
                                   LastParent = fl_parent
@@ -311,6 +338,13 @@ Ndx_J               long
                                      self.YAMLD_cfgQ.HeirsParent = fl_Json
                                   end
                                   !---
+                                  if fl_Dim=0
+                                     fl_Dim = isParentDim(clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,1,SEP_D,0))))
+                                     LastDim = fl_Dim
+                                  else
+                                     self.YAMLD_cfgQ.HeirsParent = fl_Dim
+                                  end
+                                  !---
                                else
                                   LastNode[fl_parent] = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                   self.YAMLD_cfgQ.Node = clip(GetPathNode(LastParent)) &'/'& self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
@@ -329,7 +363,14 @@ Ndx_J               long
                                   else
                                      self.YAMLD_cfgQ.HeirsParent = fl_MultiStr
                                   end 
-                                  !---Для json секция отсутствует
+                                  !---Р”Р»СЏ json СЃРµРєС†РёСЏ РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚
+                                  !---
+                                  if fl_Dim=0
+                                     fl_Dim = isParentDim(clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,1,SEP_D,0))))
+                                     LastDim = fl_Dim
+                                  else
+                                     self.YAMLD_cfgQ.HeirsParent = fl_Dim
+                                  end 
                                   !---
                                end
                                put(self.YAMLD_cfgQ)
@@ -338,7 +379,7 @@ Ndx_J               long
                     end
                     return(0)
   
-GetPathNode         procedure(long _parent)   !получить путь поиска элемента
+GetPathNode         procedure(long _parent)   !РїРѕР»СѓС‡РёС‚СЊ РїСѓС‚СЊ РїРѕРёСЃРєР° СЌР»РµРјРµРЅС‚Р°
 RetS                string(YAMLD_MaxLenFLD)
 Ndx_i               long
                     code
@@ -354,7 +395,7 @@ Ndx_i               long
                     end
                     return(RetS)
   
-isParentHeirs       PROCEDURE(string _value) !получить код наследуемой группы родителя 
+isParentHeirs       PROCEDURE(string _value) !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ 
 TmpS                string(YAMLD_MaxLenFLD)
 RetI                long
                     code
@@ -364,7 +405,7 @@ RetI                long
                     end
                     return(RetI)
   
-isParentMultiStr    PROCEDURE(string _value) !получить код наследуемой группы родителя 
+isParentMultiStr    PROCEDURE(string _value) !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ 
 TmpS                string(YAMLD_MaxLenFLD)
 RetI                long
                     code
@@ -372,14 +413,14 @@ RetI                long
                     case val(TmpS[1 : 1]) 
                     of 124 !'|'
                        RetI = self.YAMLD_cfgQ.id
-                       fl_MultiStrType=1    !без сохранения переводов строк
+                       fl_MultiStrType=1    !Р±РµР· СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРµСЂРµРІРѕРґРѕРІ СЃС‚СЂРѕРє
                     of 62  !'>'
                        RetI = self.YAMLD_cfgQ.id
-                       fl_MultiStrType=2    !c сохранением переводов строк
+                       fl_MultiStrType=2    !c СЃРѕС…СЂР°РЅРµРЅРёРµРј РїРµСЂРµРІРѕРґРѕРІ СЃС‚СЂРѕРє
                     end
                     return(RetI)
                     
-isParentJson        PROCEDURE(string _value) !получить код наследуемой группы родителя 
+isParentJson        PROCEDURE(string _value) !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ 
 TmpS                string(YAMLD_MaxLenFLD)
 RetI                long
 PozE                long
@@ -394,26 +435,36 @@ PozE                long
                        RetI = self.YAMLD_cfgQ.id
                     end
                     return(RetI)
+                    
+isParentDim         PROCEDURE(string _value) !РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РЅР°СЃР»РµРґСѓРµРјРѕР№ РіСЂСѓРїРїС‹ СЂРѕРґРёС‚РµР»СЏ 
+TmpS                string(YAMLD_MaxLenFLD)
+RetI                long
+                    code
+                    TmpS = _value
+                    if val(TmpS[1 : 1]) = 45 !'-'
+                       RetI = self.YAMLD_cfgQ.id
+                    end
+                    return(RetI)
 !****************************************************************************************************
 YAMLD.YAMLD_CfgHeirs Procedure                                
-                    !---2 этап обработки (обработка наследования)
+                    !---2 СЌС‚Р°Рї РѕР±СЂР°Р±РѕС‚РєРё (РѕР±СЂР°Р±РѕС‚РєР° РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ)
 SEP_D               string(1)
 Temp_cfgQ           QUEUE(self.YAMLD_cfgQ),pre(tcfgq1)
                     end
 Rec_cfgQ            group(self.YAMLD_cfgQ),pre(tcfgq2)
                     end
 Temp_ParentQ        QUEUE
-Type                   byte          !1-ссылки 2-родитель 3-МультиЛайн 4-json
-MultiLineType          byte          !1-(МультиЛайн без сохранения перевода строк) 2-с сохранением
+Type                   byte          !1-СЃСЃС‹Р»РєРё 2-СЂРѕРґРёС‚РµР»СЊ 3-РњСѓР»СЊС‚РёР›Р°Р№РЅ 4-json 5-Dim
+MultiLineType          byte          !1-(РњСѓР»СЊС‚РёР›Р°Р№РЅ Р±РµР· СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРµСЂРµРІРѕРґР° СЃС‚СЂРѕРє) 2-СЃ СЃРѕС…СЂР°РЅРµРЅРёРµРј
 Format                 byte          !0-txt 1-Base64
-HeirsParent            long          !парент наследника ID
-id                     long          !номер
-Parvalue               string(YAMLD_MaxLenFLD)   !имя родительского элемента
-Value                  string(YAMLD_MaxLenFLD)   !имя ссылки
+HeirsParent            long          !РїР°СЂРµРЅС‚ РЅР°СЃР»РµРґРЅРёРєР° ID
+id                     long          !РЅРѕРјРµСЂ
+Parvalue               string(YAMLD_MaxLenFLD)   !РёРјСЏ СЂРѕРґРёС‚РµР»СЊСЃРєРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
+Value                  string(YAMLD_MaxLenFLD)   !РёРјСЏ СЃСЃС‹Р»РєРё
                     end
 QKeyPar             QUEUE
-sKey                   string(50)              !имя параметра
-sValue                 string(YAMLD_MaxLenFLD) !значение
+sKey                   string(50)              !РёРјСЏ РїР°СЂР°РјРµС‚СЂР°
+sValue                 string(YAMLD_MaxLenFLD) !Р·РЅР°С‡РµРЅРёРµ
                     end
 Loc:KeyWord         string(50)
 Loc:KeyValue        string(YAMLD_MaxLenFLD)
@@ -421,59 +472,61 @@ StrIn               string(YAMLD_MaxLenFLDValue)
 FindValue           string(YAMLD_MaxLenFLD)
 FindHeirsParent     long
 SaveNode            like(self.YAMLD_cfgQ.Node)
+SaveIndent          long
 Ndx_J               long
 Ndx_J2              long
 Ndx_J3              long
 Ndx_J4              long
 Flfind              byte
+FlEnim              long
                     code
                     SEP_D = self.YAMLD_SepFld
                     loop Ndx_J=1 to records(self.YAMLD_cfgQ)
                          get(self.YAMLD_cfgQ,Ndx_J)
                          if self.YAMLD_cfgQ.HeirsParent
-                            !---список родителей
+                            !---СЃРїРёСЃРѕРє СЂРѕРґРёС‚РµР»РµР№
                             clear(Temp_ParentQ)
                             Temp_ParentQ.HeirsParent = self.YAMLD_cfgQ.HeirsParent
                             get(Temp_ParentQ,+Temp_ParentQ.HeirsParent)
                             if errorcode()
                                Temp_ParentQ.HeirsParent = self.YAMLD_cfgQ.HeirsParent
-                               Temp_ParentQ.Type = 2         !2-родитель
+                               Temp_ParentQ.Type = 2         !2-СЂРѕРґРёС‚РµР»СЊ
                                add(Temp_ParentQ)
                             end
-                            !---список детей
+                            !---СЃРїРёСЃРѕРє РґРµС‚РµР№
                             clear(Temp_cfgQ)
                             Temp_cfgQ :=: self.YAMLD_cfgQ
                             add(Temp_cfgQ)
                             !---
                          else
-                            !---список ссылок
+                            !---СЃРїРёСЃРѕРє СЃСЃС‹Р»РѕРє
                             case val(self.YAMLD_cfgQ.Value[1 : 1]) 
                             of 42  !'*'
                                clear(Temp_ParentQ)
                                Temp_ParentQ.id = self.YAMLD_cfgQ.id
                                Temp_ParentQ.Parvalue = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                Temp_ParentQ.Value    = clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,2,SEP_D,0)))
-                               Temp_ParentQ.Type = 1         !1-ссылки
+                               Temp_ParentQ.Type = 1           !1-СЃСЃС‹Р»РєРё
                                add(Temp_ParentQ)
                             of 124 !'|'
                                clear(Temp_ParentQ)
                                case clip(upper(self.YAMLD_cfgQ.Value[2 : len(self.YAMLD_cfgQ.Value)]))
                                of 'BINARY'
-                                  Temp_ParentQ.Format=1        !1-формат base64
+                                  Temp_ParentQ.Format=1        !1-С„РѕСЂРјР°С‚ base64
                                end
                                Temp_ParentQ.id = self.YAMLD_cfgQ.id
                                Temp_ParentQ.Parvalue = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                Temp_ParentQ.Value    = clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,2,SEP_D,0)))
-                               Temp_ParentQ.Type = 3           !3-МультиЛайн
-                               Temp_ParentQ.MultiLineType = 1  !без сохранения переводов строк
+                               Temp_ParentQ.Type = 3           !3-РњСѓР»СЊС‚РёР›Р°Р№РЅ
+                               Temp_ParentQ.MultiLineType = 1  !Р±РµР· СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРµСЂРµРІРѕРґРѕРІ СЃС‚СЂРѕРє
                                add(Temp_ParentQ)
                             of 62  !'>'
                                clear(Temp_ParentQ)
                                Temp_ParentQ.id = self.YAMLD_cfgQ.id
                                Temp_ParentQ.Parvalue = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                Temp_ParentQ.Value    = clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,2,SEP_D,0)))
-                               Temp_ParentQ.Type = 3           !3-МультиЛайн
-                               Temp_ParentQ.MultiLineType = 2  !с сохранением переводов строк
+                               Temp_ParentQ.Type = 3           !3-РњСѓР»СЊС‚РёР›Р°Р№РЅ
+                               Temp_ParentQ.MultiLineType = 2  !СЃ СЃРѕС…СЂР°РЅРµРЅРёРµРј РїРµСЂРµРІРѕРґРѕРІ СЃС‚СЂРѕРє
                                add(Temp_ParentQ)
                             of 123 !{
                                clear(Temp_ParentQ)
@@ -483,18 +536,40 @@ Flfind              byte
                                Temp_ParentQ.Type = 4           !4-json
                                add(Temp_ParentQ)
                                
-                               !---список детей
+                               !---СЃРїРёСЃРѕРє РґРµС‚РµР№
                                clear(Temp_cfgQ)
                                Temp_cfgQ :=: self.YAMLD_cfgQ
                                Temp_cfgQ.HeirsParent = self.YAMLD_cfgQ.id
                                add(Temp_cfgQ)
-                               !---                               
+                               !--- 
+                            end
+                            !---Dim
+                            case val(self.YAMLD_cfgQ.Parvalue[1 : 1])
+                            of 45  !'-'
+                               SaveIndent = self.YAMLD_cfgQ.Indent
+                               clear(Temp_ParentQ)
+                               Temp_ParentQ.id = self.YAMLD_cfgQ.id
+                               Temp_ParentQ.Parvalue = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
+                               Temp_ParentQ.Value    = clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,2,SEP_D,0)))
+                               Temp_ParentQ.Type = 5         !5-Dim
+                               add(Temp_ParentQ)
+                            else
+                               !---РїСЂРѕРІРµСЂРєР° РЅР° Р·Р°РІРµСЂС€РµРЅРёРµ Р±Р»РѕРєР°
+                               if SaveIndent > self.YAMLD_cfgQ.Indent
+                                  clear(Temp_ParentQ)
+                                  Temp_ParentQ.id = self.YAMLD_cfgQ.id
+                                  Temp_ParentQ.Parvalue = '@'
+                                  Temp_ParentQ.Value    = '@'
+                                  Temp_ParentQ.Type = 0
+                                  add(Temp_ParentQ)
+                               end
+                               !---
                             end
                          end
                     end
 
                     if records(Temp_ParentQ)
-                       !---обход списка родителей (нормализация)  
+                       !---РѕР±С…РѕРґ СЃРїРёСЃРєР° СЂРѕРґРёС‚РµР»РµР№ (РЅРѕСЂРјР°Р»РёР·Р°С†РёСЏ)  
                        loop Ndx_J=1 to records(Temp_ParentQ)
                             get(Temp_ParentQ,Ndx_J)
                             self.YAMLD_cfgQ.id = Temp_ParentQ.HeirsParent
@@ -507,12 +582,19 @@ Flfind              byte
                        end
                        loop Ndx_J=1 to records(Temp_ParentQ)
                             get(Temp_ParentQ,Ndx_J)
+                            if ~val(Temp_ParentQ.Value[1 : 1]) = 45 and |  !'-'
+                               (Temp_ParentQ.Type=5 or Temp_ParentQ.Type=2)
+                            else
+                               !---РµСЃР»Рё РЅРµ СЃРїРёСЃРѕРє С‚Рѕ СЃР±СЂРѕСЃРёРј РЅСѓРјРµСЂР°С‚РѕСЂ РјР°СЃСЃРёРІР°
+                               FlEnim=0
+                            end
+                            !---
                             case Temp_ParentQ.Type
-                            of 2     !2-родитель
+                            of 2     !2-СЂРѕРґРёС‚РµР»СЊ
                                FindValue = Temp_ParentQ.Value[2 : len(Temp_ParentQ.Value)]
                                FindHeirsParent = Temp_ParentQ.HeirsParent
                                do fillLinks
-                            of 3     !3-МультиЛайн
+                            of 3     !3-РњСѓР»СЊС‚РёР›Р°Р№РЅ
                                FindValue = Temp_ParentQ.Value[1 : 1]
                                FindHeirsParent = Temp_ParentQ.id
                                do fillMultiLine
@@ -520,24 +602,79 @@ Flfind              byte
                                FindValue = Temp_ParentQ.Value[1 : 1]
                                FindHeirsParent = Temp_ParentQ.id
                                do fillJson
+                            of 5     !5-Dim
+                               FindValue = Temp_ParentQ.Parvalue[1 : 1]
+                               FindHeirsParent = Temp_ParentQ.id
+                               do fillDim
                             end
                        end
                        !---
                     end
                     !---DEBUG---
                     if self.p_debug
-                       self.YAMLD_LoggerQ('Temp_ParentQ',Temp_ParentQ)
                        self.YAMLD_LoggerQ('Temp_cfgQ',Temp_cfgQ)
+                       self.YAMLD_LoggerQ('Temp_ParentQ',Temp_ParentQ)
+                       self.YAMLD_LoggerQ('self.YAMLD_DimQ',self.YAMLD_DimQ)
                        self.YAMLD_LoggerQ('self.YAMLD_cfgQ',self.YAMLD_cfgQ)
                     end
                     !---
                     return(0)
-                    
-fillJson            ROUTINE   !обработка массива Json
+!-------------
+fillDim             ROUTINE  !РїРµСЂРµРЅРѕСЃ СЃСЃС‹Р»РѕРє
                     loop Ndx_J2=1 to records(Temp_ParentQ)
                          get(Temp_ParentQ,Ndx_J2)
 
-                         if Temp_ParentQ.Type=4 and |        !1-ссылки
+                         if Temp_ParentQ.Type=5 and |        !5-Dim
+                            clip(Temp_ParentQ.Parvalue[1 : 1]) = clip(FindValue) |
+                            and Temp_ParentQ.id = FindHeirsParent
+
+                            self.YAMLD_cfgQ.id = Temp_ParentQ.id
+                            get(self.YAMLD_cfgQ,+self.YAMLD_cfgQ.id)
+                            if ~errorcode()
+                               clear(Rec_cfgQ)
+                               SaveNode = self.YAMLD_cfgQ.Node
+                               Rec_cfgQ :=: self.YAMLD_cfgQ
+                               FlEnim+=1             !РЅСѓРјРµСЂР°С‚РѕСЂ РёРЅРґРµРєСЃР° РјР°СЃСЃРёРІР°
+                               do FillChildDim
+                            end
+                         end
+                    end
+ 
+FillChildDim        ROUTINE   !РґРѕР±Р°РІР»РµРЅРёРµ РІ Q РїРѕРёСЃРєР°
+                    loop Ndx_J3=1 to records(Temp_cfgQ)
+                         get(Temp_cfgQ,Ndx_J3)
+                         if Temp_cfgQ.HeirsParent = FindHeirsParent
+                            self.YAMLD_cfgQ :=: Rec_cfgQ 
+                            self.YAMLD_cfgQ.Value = Temp_cfgQ.Value
+                            !---РїРѕСЃС‚СЂРѕРёРј РїСЂР°РІРёР»СЊРЅСѓСЋ СЃСЃС‹Р»РєСѓ
+                            SaveNode = SaveNode[1 : len(clip(SaveNode))-1] & FlEnim
+                            self.YAMLD_cfgQ.Node  = clip(SaveNode) & Temp_cfgQ.Node[ |
+                                                   instring('/',Temp_cfgQ.Node,|
+                                                                            -1,|
+                                                              len(Temp_cfgQ.Node)) : len(Temp_cfgQ.Node)]
+                            self.YAMLD_cfgQ.Value = Temp_cfgQ.Value
+                            add(self.YAMLD_cfgQ)
+                            
+                            !---СЃРѕС…СЂР°РЅРёРј СЂР°Р·РјРµСЂ РёРЅРґРµРєСЃР° РјР°СЃСЃРёРІР°
+                            self.YAMLD_DimQ.Node = SaveNode[1 : len(clip(SaveNode))-1]
+                            get(self.YAMLD_DimQ,+self.YAMLD_DimQ.Node)
+                            if errorcode()
+                               self.YAMLD_DimQ.Node = SaveNode[1 : len(clip(SaveNode))-1]
+                               self.YAMLD_DimQ.size = FlEnim
+                               add(self.YAMLD_DimQ)
+                            else
+                               self.YAMLD_DimQ.size = FlEnim
+                               put(self.YAMLD_DimQ)
+                            end
+                            !---
+                         end
+                    end
+!-------------
+fillJson            ROUTINE   !РѕР±СЂР°Р±РѕС‚РєР° РјР°СЃСЃРёРІР° Json
+                    loop Ndx_J2=1 to records(Temp_ParentQ)
+                         get(Temp_ParentQ,Ndx_J2)
+
+                         if Temp_ParentQ.Type=4 and |        !1-СЃСЃС‹Р»РєРё
                             clip(Temp_ParentQ.Value[1 : 1]) = clip(FindValue) and |
                             Temp_ParentQ.id = FindHeirsParent                            
 
@@ -552,31 +689,31 @@ fillJson            ROUTINE   !обработка массива Json
                          end
                     end
                     
-FillJsonItem        ROUTINE   !добавление в Q поиска
+FillJsonItem        ROUTINE   !РґРѕР±Р°РІР»РµРЅРёРµ РІ Q РїРѕРёСЃРєР°
                     loop Ndx_J3=1 to records(Temp_cfgQ)
                          get(Temp_cfgQ,Ndx_J3)
                          if Temp_cfgQ.HeirsParent = FindHeirsParent
                             self.YAMLD_cfgQ :=: Rec_cfgQ 
                             self.YAMLD_cfgQ.Value = Temp_cfgQ.Value
                             
-                            !---получим ключей Json
+                            !---РїРѕР»СѓС‡РёРј РєР»СЋС‡РµР№ Json
                             do FillJsonType
                             loop Ndx_J4=1 to records(QKeyPar)
                                  get(QKeyPar,Ndx_J4)
                                  
-                                 !---построим правильную ссылку
+                                 !---РїРѕСЃС‚СЂРѕРёРј РїСЂР°РІРёР»СЊРЅСѓСЋ СЃСЃС‹Р»РєСѓ
                                  self.YAMLD_cfgQ.Node  = clip(SaveNode) &'/'& clip(QKeyPar.sKey)
                                  self.YAMLD_cfgQ.Value = clip(QKeyPar.sValue)
                                  add(self.YAMLD_cfgQ)
                             end
                          end
                     end
-  
-fillLinks           ROUTINE  !перенос ссылок
+!-------------
+fillLinks           ROUTINE  !РїРµСЂРµРЅРѕСЃ СЃСЃС‹Р»РѕРє
                     loop Ndx_J2=1 to records(Temp_ParentQ)
                          get(Temp_ParentQ,Ndx_J2)
 
-                         if Temp_ParentQ.Type=1 and |        !1-ссылки
+                         if Temp_ParentQ.Type=1 and |        !1-СЃСЃС‹Р»РєРё
                             clip(Temp_ParentQ.Value[2 : len(Temp_ParentQ.Value)]) = clip(FindValue)
 
                             self.YAMLD_cfgQ.id = Temp_ParentQ.id
@@ -590,13 +727,13 @@ fillLinks           ROUTINE  !перенос ссылок
                          end
                     end
   
-FillChild           ROUTINE   !добавление в Q поиска
+FillChild           ROUTINE   !РґРѕР±Р°РІР»РµРЅРёРµ РІ Q РїРѕРёСЃРєР°
                     loop Ndx_J3=1 to records(Temp_cfgQ)
                          get(Temp_cfgQ,Ndx_J3)
                          if Temp_cfgQ.HeirsParent = FindHeirsParent
                             self.YAMLD_cfgQ :=: Rec_cfgQ 
                             self.YAMLD_cfgQ.Value = Temp_cfgQ.Value
-                            !---построим правильную ссылку
+                            !---РїРѕСЃС‚СЂРѕРёРј РїСЂР°РІРёР»СЊРЅСѓСЋ СЃСЃС‹Р»РєСѓ
                             self.YAMLD_cfgQ.Node  = clip(SaveNode) & Temp_cfgQ.Node[ |
                                                    instring('/',Temp_cfgQ.Node,|
                                                                             -1,|
@@ -605,12 +742,12 @@ FillChild           ROUTINE   !добавление в Q поиска
                             add(self.YAMLD_cfgQ)
                          end
                     end
-  
-fillMultiLine       ROUTINE  !обход строк мультилайн блока
+!-------------
+fillMultiLine       ROUTINE  !РѕР±С…РѕРґ СЃС‚СЂРѕРє РјСѓР»СЊС‚РёР»Р°Р№РЅ Р±Р»РѕРєР°
                     loop Ndx_J2=1 to records(Temp_ParentQ)
                          get(Temp_ParentQ,Ndx_J2)
 
-                         if Temp_ParentQ.Type=3 and |        !3-МультиЛайн
+                         if Temp_ParentQ.Type=3 and |        !3-РњСѓР»СЊС‚РёР›Р°Р№РЅ
                             clip(Temp_ParentQ.Value[1 : 1]) = clip(FindValue) and |
                             Temp_ParentQ.id = FindHeirsParent
 
@@ -625,7 +762,7 @@ fillMultiLine       ROUTINE  !обход строк мультилайн блока
                          end
                     end
   
-FillChildMultiLine  ROUTINE   !объединение строк мультилайн блоков
+FillChildMultiLine  ROUTINE   !РѕР±СЉРµРґРёРЅРµРЅРёРµ СЃС‚СЂРѕРє РјСѓР»СЊС‚РёР»Р°Р№РЅ Р±Р»РѕРєРѕРІ
                     Flfind=false
                     loop Ndx_J3=1 to records(Temp_cfgQ)
                          get(Temp_cfgQ,Ndx_J3)
@@ -635,15 +772,15 @@ FillChildMultiLine  ROUTINE   !объединение строк мультилайн блоков
                                self.YAMLD_cfgQ.Value = ''
                                Flfind=true
                             end
-                            !---обьеденим строки
+                            !---РѕР±СЊРµРґРµРЅРёРј СЃС‚СЂРѕРєРё
                             case Temp_ParentQ.MultiLineType
-                            of 1      !без сохранения переводов строк
+                            of 1      !Р±РµР· СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРµСЂРµРІРѕРґРѕРІ СЃС‚СЂРѕРє
                                if Ndx_J3=1
                                   self.YAMLD_cfgQ.Value = clip(Temp_cfgQ.Parvalue)
                                else
                                   self.YAMLD_cfgQ.Value = clip(self.YAMLD_cfgQ.Value) & clip(Temp_cfgQ.Parvalue)
                                end
-                            of 2      !с сохранением переводов строк
+                            of 2      !СЃ СЃРѕС…СЂР°РЅРµРЅРёРµРј РїРµСЂРµРІРѕРґРѕРІ СЃС‚СЂРѕРє
                                if Ndx_J3=1
                                   self.YAMLD_cfgQ.Value = clip(Temp_cfgQ.Parvalue) & '<13,10>'
                                else
@@ -654,13 +791,13 @@ FillChildMultiLine  ROUTINE   !объединение строк мультилайн блоков
                     end
                     if Flfind
                        case Temp_ParentQ.Format
-                       of 1           !1-формат base64
+                       of 1           !1-С„РѕСЂРјР°С‚ base64
                           self.YAMLD_cfgQ.Value = self.YAMLD_B64D(self.YAMLD_cfgQ.Value)
                        end
                        put(self.YAMLD_cfgQ)
                     end
-                    
-FillJsonType        ROUTINE   !получение списка параметров из Json строки
+!-------------
+FillJsonType        ROUTINE   !РїРѕР»СѓС‡РµРЅРёРµ СЃРїРёСЃРєР° РїР°СЂР°РјРµС‚СЂРѕРІ РёР· Json СЃС‚СЂРѕРєРё
                     free(QKeyPar)
                     StrIn =  self.YAMLD_cfgQ.Value  !'{{key1: "value1", key2: "value2"}'
                     StrIn = StrIn[2 : Len(Clip(StrIn))-1]
@@ -672,7 +809,7 @@ FillJsonType        ROUTINE   !получение списка параметров из Json строки
                        Loop
                           If j#>len# or StrIn[j#]=':' Then Break.
                           If StrIn[j#]=','            Then Break.
-                          if StrIn[j#]='<32>'         !это пробел
+                          if StrIn[j#]='<32>'         !СЌС‚Рѕ РїСЂРѕР±РµР»
                              j#+=1
                              Cycle
                           end
@@ -692,7 +829,7 @@ FillJsonType        ROUTINE   !получение списка параметров из Json строки
                        end
                        If j#<len# Then j# += 1.
 
-                       !---сохраним
+                       !---СЃРѕС…СЂР°РЅРёРј
                        Loc:KeyValue = clip(left(Loc:KeyValue))
                        pend# = Len(Clip(Loc:KeyValue))
                        if pend#=0 then pend#=1.
@@ -713,26 +850,26 @@ FillJsonType        ROUTINE   !получение списка параметров из Json строки
                     end
 !****************************************************************************************************
 YAMLD.YAMLD_LoggerQ  Procedure(String _Message, *Queue _InQ)         
-                    !Отладка просмотр Q
-Window              WINDOW('  Список'),AT(,,667,392),GRAY,IMM,SYSTEM,MAX,ICON(ICON:Thumbnail), |
+                    !РћС‚Р»Р°РґРєР° РїСЂРѕСЃРјРѕС‚СЂ Q
+Window              WINDOW('  РЎРїРёСЃРѕРє'),AT(,,667,392),GRAY,IMM,SYSTEM,MAX,ICON(ICON:Thumbnail), |
                     FONT('Microsoft Sans Serif',10,,FONT:regular),DROPID('LOGGERWINDOW'),RESIZE
                     LIST,AT(2,6,662,365),USE(?LIST),HVSCROLL,FONT(,14),FROM(_InQ),GRID(COLOR:Silver), |
-                     FORMAT('100L(2)|M~Поле1~C(2)@s500@')
+                     FORMAT('100L(2)|M~РџРѕР»Рµ1~C(2)@s500@')
                     BUTTON('&OK'),AT(618,376,41,14),USE(?OkButton),STD(STD:Close),DEFAULT
                     END
-FormatStr           cstring(5000)  ! Описание формата колонок (формируем)
+FormatStr           cstring(5000)  ! РћРїРёСЃР°РЅРёРµ С„РѕСЂРјР°С‚Р° РєРѕР»РѕРЅРѕРє (С„РѕСЂРјРёСЂСѓРµРј)
 A                   ANY
 Ndx                 LONG
 Ndx2                LONG
 MaxD                long
 MapValueQ           queue,pre(MapValueQ)
-NameField             string(40)   !имя поля
-Gvalue                any          !значение поля
-Type                  byte         !тип поля
-colW                  long         !ширина колонки
+NameField             string(40)   !РёРјСЏ РїРѕР»СЏ
+Gvalue                any          !Р·РЅР°С‡РµРЅРёРµ РїРѕР»СЏ
+Type                  byte         !С‚РёРї РїРѕР»СЏ
+colW                  long         !С€РёСЂРёРЅР° РєРѕР»РѕРЅРєРё
                     END
 QColumns            long
-ColMaxW             EQUATE(120)      !ширина колонки
+ColMaxW             EQUATE(120)      !С€РёСЂРёРЅР° РєРѕР»РѕРЅРєРё
 SFormat             string(10)
                     code
                     do ShowList
@@ -740,20 +877,20 @@ SFormat             string(10)
 
 ShowList            routine
                     open(Window)
-                    !---отобразим
-                    Window{PROP:Text}='  Всего записей: ' & records(_InQ)
+                    !---РѕС‚РѕР±СЂР°Р·РёРј
+                    Window{PROP:Text}='  Р’СЃРµРіРѕ Р·Р°РїРёСЃРµР№: ' & records(_InQ)
                     Window{PROP:Text}='    '& clip(_Message) &'   ('& left(Window{PROP:Text})  &')'
 
-                    !---пройдемся по входной группе Q и составим карту полей
+                    !---РїСЂРѕР№РґРµРјСЃСЏ РїРѕ РІС…РѕРґРЅРѕР№ РіСЂСѓРїРїРµ Q Рё СЃРѕСЃС‚Р°РІРёРј РєР°СЂС‚Сѓ РїРѕР»РµР№
                     do GetMapInQ
 
-                    !---число колонок
+                    !---С‡РёСЃР»Рѕ РєРѕР»РѕРЅРѕРє
                     QColumns = records(MapValueQ)
 
-                    !---сформируем строку формата
+                    !---СЃС„РѕСЂРјРёСЂСѓРµРј СЃС‚СЂРѕРєСѓ С„РѕСЂРјР°С‚Р°
                     do BuildFormatStr
 
-                    ?List{PROP:LineHeight}=?List{PROP:FontSize}+4  ! Так лучше читается
+                    ?List{PROP:LineHeight}=?List{PROP:FontSize}+4  ! РўР°Рє Р»СѓС‡С€Рµ С‡РёС‚Р°РµС‚СЃСЏ
                     select(?LIST)
 
                     accept
@@ -777,7 +914,7 @@ ShowList            routine
                     close(Window)
 
 GetMapInQ           routine
-                    !---пройдемся по входной группе Q и составим карту полей
+                    !---РїСЂРѕР№РґРµРјСЃСЏ РїРѕ РІС…РѕРґРЅРѕР№ РіСЂСѓРїРїРµ Q Рё СЃРѕСЃС‚Р°РІРёРј РєР°СЂС‚Сѓ РїРѕР»РµР№
                     free(MapValueQ)
                     Ndx = 0
                     Ndx2= 0
@@ -787,7 +924,7 @@ GetMapInQ           routine
                        if A &= Null then break.
                        MaxD = self.YAMLD_xIsDimSize(A)
                        if MaxD
-                          !---обработка если поле это масссив
+                          !---РѕР±СЂР°Р±РѕС‚РєР° РµСЃР»Рё РїРѕР»Рµ СЌС‚Рѕ РјР°СЃСЃСЃРёРІ
                           loop Ndx2=1 to MaxD
                                A &= WHAT(_InQ, Ndx, Ndx2)
                                If A &= NULL then break.
@@ -814,25 +951,25 @@ GetMapInQ           routine
                     A &=NULL
 
 BuildFormatStr      routine
-                    !---Сформируем шаблон форматирования LIST
+                    !---РЎС„РѕСЂРјРёСЂСѓРµРј С€Р°Р±Р»РѕРЅ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёСЏ LIST
                     if QColumns=0 then QColumns=1.
                     FormatStr = ''
                     loop Ndx=1 to QColumns
                          get(MapValueQ,Ndx)
-                         do GetFormatField                                 ! формат поля колонки
-                         FormatStr=FormatStr                          & |  ! Пример: '13L(1)|_FMY~Кк~C(0)@s3@'
-                                   MapValueQ.colW                     & |  ! Ширина колонки (обычно в dialog units)
-                                   'L'                                & |  ! Центровка
-                                   '(2)|'                             & |  ! Отступ от границы (а также разделитель и подчеркивание)
-                                   'M'                                & |  ! Признак возможности изм.ширину колонки
-                                   '~'&clip(MapValueQ.NameField)&'~'  & |  ! Заголовок колонки (пустой)
-                                   'C(2)'                             & |  ! Центруем заголовок
-                                   clip(SFormat)                           ! Формат колонки
+                         do GetFormatField                                 ! С„РѕСЂРјР°С‚ РїРѕР»СЏ РєРѕР»РѕРЅРєРё
+                         FormatStr=FormatStr                          & |  ! РџСЂРёРјРµСЂ: '13L(1)|_FMY~РљРє~C(0)@s3@'
+                                   MapValueQ.colW                     & |  ! РЁРёСЂРёРЅР° РєРѕР»РѕРЅРєРё (РѕР±С‹С‡РЅРѕ РІ dialog units)
+                                   'L'                                & |  ! Р¦РµРЅС‚СЂРѕРІРєР°
+                                   '(2)|'                             & |  ! РћС‚СЃС‚СѓРї РѕС‚ РіСЂР°РЅРёС†С‹ (Р° С‚Р°РєР¶Рµ СЂР°Р·РґРµР»РёС‚РµР»СЊ Рё РїРѕРґС‡РµСЂРєРёРІР°РЅРёРµ)
+                                   'M'                                & |  ! РџСЂРёР·РЅР°Рє РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РёР·Рј.С€РёСЂРёРЅСѓ РєРѕР»РѕРЅРєРё
+                                   '~'&clip(MapValueQ.NameField)&'~'  & |  ! Р—Р°РіРѕР»РѕРІРѕРє РєРѕР»РѕРЅРєРё (РїСѓСЃС‚РѕР№)
+                                   'C(2)'                             & |  ! Р¦РµРЅС‚СЂСѓРµРј Р·Р°РіРѕР»РѕРІРѕРє
+                                   clip(SFormat)                           ! Р¤РѕСЂРјР°С‚ РєРѕР»РѕРЅРєРё
                     end
                     ?LIST{PROP:Format}=FormatStr
 
 GetFormatField      ROUTINE
-                    !---формат поля колонки
+                    !---С„РѕСЂРјР°С‚ РїРѕР»СЏ РєРѕР»РѕРЅРєРё
                     case MapValueQ.Type
                     of 4 !DATE
                        SFormat = '@D12@'
@@ -851,8 +988,8 @@ LenRetString       ulong
                    Return(sub(RetString,1,LenRetString))
 !****************************************************************************************************
 YAMLD.YAMLD_xIsType  Procedure(*? _Var)
-                    !определение типа переменной for Clarion8-11
-                    ! Возвращаемые коды типов данных:
+                    !РѕРїСЂРµРґРµР»РµРЅРёРµ С‚РёРїР° РїРµСЂРµРјРµРЅРЅРѕР№ for Clarion8-11
+                    ! Р’РѕР·РІСЂР°С‰Р°РµРјС‹Рµ РєРѕРґС‹ С‚РёРїРѕРІ РґР°РЅРЅС‹С…:
                     ! byte    - 1
                     ! short   - 2
                     ! date    - 4
@@ -863,44 +1000,44 @@ YAMLD.YAMLD_xIsType  Procedure(*? _Var)
                     ! string  - 18
                     ! cstring - 19
 iUFO                INTERFACE,TYPE
-_Type                  PROCEDURE(LONG _UfoAddr),LONG       !+00h Тип данного UFO-обьета
+_Type                  PROCEDURE(LONG _UfoAddr),LONG       !+00h РўРёРї РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµС‚Р°
 ToMem                  PROCEDURE                           !+04h
 FromMem                PROCEDURE                           !+08h
 OldFromMem             PROCEDURE                           !+0Ch
-Pop                    PROCEDURE(LONG _UfoAddr)            !+10h Присвоить значение со строкового стека
-Push                   PROCEDURE(LONG _UfoAddr)            !+14h Поместить значение данного UFO-обьекта на строковый стек
-DPop                   PROCEDURE(LONG _UfoAddr)            !+18h Присвоить значение с DECIMAL-стека
-DPush                  PROCEDURE(LONG _UfoAddr)            !+1Ch Поместить значение данного UFO-обьекта на DECIMAL-стек
-_Real                  PROCEDURE(LONG _UfoAddr),REAL       !+20h Возвращает значение данного UFO-обьекта в виде REAL-значения
-_Long                  PROCEDURE(LONG _UfoAddr),LONG       !+24h Возвращает значение данного UFO-обьекта в виде LONG-значения
-_Free                  PROCEDURE(LONG _UfoAddr)            !+28h Если данный UFO-обьект ссылается на область динамической памяти, то она освобождается. В любом случае обнуляет адрес памяти, на которую ссылается данный UFO-обьект.
-_Clear                 PROCEDURE                           !+2Ch Очищает переменную, на которую ссылается данный UFO-обьект
-_Address               PROCEDURE(LONG _UfoAddr),LONG       !+30h Возвращает адрес переменной (области памяти) на которую ссылается данный UFO-обьект
-AssignLong             PROCEDURE                           !+34h Присвоить LONG-значение
-AssignReal             PROCEDURE                           !+38h Присвоить REAL-значение
-AssignUFO              PROCEDURE                           !+3Ch Присвоить значение другого UFO-обькта
-AClone                 PROCEDURE(LONG _UfoAddr),LONG       !+40h Возвращает клон данного UFO-обьекта
-Select                 PROCEDURE                           !+44h Для массивов и строк равнозначно _Var[Ptr]
-Slice                  PROCEDURE                           !+48h Для строк равнозначно _Var[Ptr1:Ptr2]
-Designate              PROCEDURE                           !+4Ch Возврат запрошенного поля группы в виде UFO-обьекта
-_Max                   PROCEDURE(LONG _UfoAddr),LONG       !+50h Возвращает кол-во элементов в первом измерении массива
-_Size                  PROCEDURE(LONG _UfoAddr),LONG       !+54h Возвращает полный размер переменной (области памяти), на которую ссылается данный UFO-обьект
+Pop                    PROCEDURE(LONG _UfoAddr)            !+10h РџСЂРёСЃРІРѕРёС‚СЊ Р·РЅР°С‡РµРЅРёРµ СЃРѕ СЃС‚СЂРѕРєРѕРІРѕРіРѕ СЃС‚РµРєР°
+Push                   PROCEDURE(LONG _UfoAddr)            !+14h РџРѕРјРµСЃС‚РёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РЅР° СЃС‚СЂРѕРєРѕРІС‹Р№ СЃС‚РµРє
+DPop                   PROCEDURE(LONG _UfoAddr)            !+18h РџСЂРёСЃРІРѕРёС‚СЊ Р·РЅР°С‡РµРЅРёРµ СЃ DECIMAL-СЃС‚РµРєР°
+DPush                  PROCEDURE(LONG _UfoAddr)            !+1Ch РџРѕРјРµСЃС‚РёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РЅР° DECIMAL-СЃС‚РµРє
+_Real                  PROCEDURE(LONG _UfoAddr),REAL       !+20h Р’РѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РІ РІРёРґРµ REAL-Р·РЅР°С‡РµРЅРёСЏ
+_Long                  PROCEDURE(LONG _UfoAddr),LONG       !+24h Р’РѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РІ РІРёРґРµ LONG-Р·РЅР°С‡РµРЅРёСЏ
+_Free                  PROCEDURE(LONG _UfoAddr)            !+28h Р•СЃР»Рё РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚ СЃСЃС‹Р»Р°РµС‚СЃСЏ РЅР° РѕР±Р»Р°СЃС‚СЊ РґРёРЅР°РјРёС‡РµСЃРєРѕР№ РїР°РјСЏС‚Рё, С‚Рѕ РѕРЅР° РѕСЃРІРѕР±РѕР¶РґР°РµС‚СЃСЏ. Р’ Р»СЋР±РѕРј СЃР»СѓС‡Р°Рµ РѕР±РЅСѓР»СЏРµС‚ Р°РґСЂРµСЃ РїР°РјСЏС‚Рё, РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚.
+_Clear                 PROCEDURE                           !+2Ch РћС‡РёС‰Р°РµС‚ РїРµСЂРµРјРµРЅРЅСѓСЋ, РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
+_Address               PROCEDURE(LONG _UfoAddr),LONG       !+30h Р’РѕР·РІСЂР°С‰Р°РµС‚ Р°РґСЂРµСЃ РїРµСЂРµРјРµРЅРЅРѕР№ (РѕР±Р»Р°СЃС‚Рё РїР°РјСЏС‚Рё) РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
+AssignLong             PROCEDURE                           !+34h РџСЂРёСЃРІРѕРёС‚СЊ LONG-Р·РЅР°С‡РµРЅРёРµ
+AssignReal             PROCEDURE                           !+38h РџСЂРёСЃРІРѕРёС‚СЊ REAL-Р·РЅР°С‡РµРЅРёРµ
+AssignUFO              PROCEDURE                           !+3Ch РџСЂРёСЃРІРѕРёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РґСЂСѓРіРѕРіРѕ UFO-РѕР±СЊРєС‚Р°
+AClone                 PROCEDURE(LONG _UfoAddr),LONG       !+40h Р’РѕР·РІСЂР°С‰Р°РµС‚ РєР»РѕРЅ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р°
+Select                 PROCEDURE                           !+44h Р”Р»СЏ РјР°СЃСЃРёРІРѕРІ Рё СЃС‚СЂРѕРє СЂР°РІРЅРѕР·РЅР°С‡РЅРѕ _Var[Ptr]
+Slice                  PROCEDURE                           !+48h Р”Р»СЏ СЃС‚СЂРѕРє СЂР°РІРЅРѕР·РЅР°С‡РЅРѕ _Var[Ptr1:Ptr2]
+Designate              PROCEDURE                           !+4Ch Р’РѕР·РІСЂР°С‚ Р·Р°РїСЂРѕС€РµРЅРЅРѕРіРѕ РїРѕР»СЏ РіСЂСѓРїРїС‹ РІ РІРёРґРµ UFO-РѕР±СЊРµРєС‚Р°
+_Max                   PROCEDURE(LONG _UfoAddr),LONG       !+50h Р’РѕР·РІСЂР°С‰Р°РµС‚ РєРѕР»-РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РїРµСЂРІРѕРј РёР·РјРµСЂРµРЅРёРё РјР°СЃСЃРёРІР°
+_Size                  PROCEDURE(LONG _UfoAddr),LONG       !+54h Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»РЅС‹Р№ СЂР°Р·РјРµСЂ РїРµСЂРµРјРµРЅРЅРѕР№ (РѕР±Р»Р°СЃС‚Рё РїР°РјСЏС‚Рё), РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
 BaseType               PROCEDURE(LONG _UfoAddr),LONG       !+58h
 DistinctUpper          PROCEDURE                           !+5Ch
 DistinctsUFO           PROCEDURE                           !+60h
 DistinctsLong          PROCEDURE                           !+64h
-Cleared                PROCEDURE(LONG _UfoAddr)            !+68h Уничтожен?
+Cleared                PROCEDURE(LONG _UfoAddr)            !+68h РЈРЅРёС‡С‚РѕР¶РµРЅ?
 IsNull                 PROCEDURE(LONG _UfoAddr),LONG       !+6Ch
 OEM2ANSI               PROCEDURE(LONG _UfoAddr)            !+70h
 ANSI2OEM               PROCEDURE(LONG _UfoAddr)            !+74h
-_Bind                  PROCEDURE(LONG _UfoAddr)            !+78h Биндование полей группы
+_Bind                  PROCEDURE(LONG _UfoAddr)            !+78h Р‘РёРЅРґРѕРІР°РЅРёРµ РїРѕР»РµР№ РіСЂСѓРїРїС‹
 _Add                   PROCEDURE                           !+7Ch
 Divide                 PROCEDURE                           !+80h
 Hash                   PROCEDURE(LONG _UfoAddr),LONG       !+84h Calc CRC
-SetAddress             PROCEDURE                           !+88h Задает адрес переменной (области памяти), на который будет ссылаться данный UFO-обьект
-Match                  PROCEDURE                           !+8Ch Сравнивает тип и размер поля, на которое ссылается данный UFO-обьект с полем из заданной ClassDesc-структуры
+SetAddress             PROCEDURE                           !+88h Р—Р°РґР°РµС‚ Р°РґСЂРµСЃ РїРµСЂРµРјРµРЅРЅРѕР№ (РѕР±Р»Р°СЃС‚Рё РїР°РјСЏС‚Рё), РЅР° РєРѕС‚РѕСЂС‹Р№ Р±СѓРґРµС‚ СЃСЃС‹Р»Р°С‚СЊСЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
+Match                  PROCEDURE                           !+8Ch РЎСЂР°РІРЅРёРІР°РµС‚ С‚РёРї Рё СЂР°Р·РјРµСЂ РїРѕР»СЏ, РЅР° РєРѕС‚РѕСЂРѕРµ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚ СЃ РїРѕР»РµРј РёР· Р·Р°РґР°РЅРЅРѕР№ ClassDesc-СЃС‚СЂСѓРєС‚СѓСЂС‹
 Identical              PROCEDURE                           !+90h
-Store                  PROCEDURE                           !+94h Помещает значение данного UFO-обьекта в заданную область памяти
+Store                  PROCEDURE                           !+94h РџРѕРјРµС‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РІ Р·Р°РґР°РЅРЅСѓСЋ РѕР±Р»Р°СЃС‚СЊ РїР°РјСЏС‚Рё
                      END
 UfoAddr              LONG,OVER(_Var)
 UFO_VMTPtr           &LONG
@@ -916,46 +1053,46 @@ Ufo                  &iUFO
                      RETURN(LType#)
 !****************************************************************************************************
 YAMLD.YAMLD_xIsDimSize  Procedure(*? _Var)
-!для переменной (Возвращает кол-во элементов в первом измерении массива) for Clarion8-11
+!РґР»СЏ РїРµСЂРµРјРµРЅРЅРѕР№ (Р’РѕР·РІСЂР°С‰Р°РµС‚ РєРѕР»-РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РїРµСЂРІРѕРј РёР·РјРµСЂРµРЅРёРё РјР°СЃСЃРёРІР°) for Clarion8-11
 iUFO                INTERFACE,TYPE
-_Type                  PROCEDURE(LONG _UfoAddr),LONG       !+00h Тип данного UFO-обьета
+_Type                  PROCEDURE(LONG _UfoAddr),LONG       !+00h РўРёРї РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµС‚Р°
 ToMem                  PROCEDURE                           !+04h
 FromMem                PROCEDURE                           !+08h
 OldFromMem             PROCEDURE                           !+0Ch
-Pop                    PROCEDURE(LONG _UfoAddr)            !+10h Присвоить значение со строкового стека
-Push                   PROCEDURE(LONG _UfoAddr)            !+14h Поместить значение данного UFO-обьекта на строковый стек
-DPop                   PROCEDURE(LONG _UfoAddr)            !+18h Присвоить значение с DECIMAL-стека
-DPush                  PROCEDURE(LONG _UfoAddr)            !+1Ch Поместить значение данного UFO-обьекта на DECIMAL-стек
-_Real                  PROCEDURE(LONG _UfoAddr),REAL       !+20h Возвращает значение данного UFO-обьекта в виде REAL-значения
-_Long                  PROCEDURE(LONG _UfoAddr),LONG       !+24h Возвращает значение данного UFO-обьекта в виде LONG-значения
-_Free                  PROCEDURE(LONG _UfoAddr)            !+28h Если данный UFO-обьект ссылается на область динамической памяти, то она освобождается. В любом случае обнуляет адрес памяти, на которую ссылается данный UFO-обьект.
-_Clear                 PROCEDURE                           !+2Ch Очищает переменную, на которую ссылается данный UFO-обьект
-_Address               PROCEDURE(LONG _UfoAddr),LONG       !+30h Возвращает адрес переменной (области памяти) на которую ссылается данный UFO-обьект
-AssignLong             PROCEDURE                           !+34h Присвоить LONG-значение
-AssignReal             PROCEDURE                           !+38h Присвоить REAL-значение
-AssignUFO              PROCEDURE                           !+3Ch Присвоить значение другого UFO-обькта
-AClone                 PROCEDURE(LONG _UfoAddr),LONG       !+40h Возвращает клон данного UFO-обьекта
-Select                 PROCEDURE                           !+44h Для массивов и строк равнозначно _Var[Ptr]
-Slice                  PROCEDURE                           !+48h Для строк равнозначно _Var[Ptr1:Ptr2]
-Designate              PROCEDURE                           !+4Ch Возврат запрошенного поля группы в виде UFO-обьекта
-_Max                   PROCEDURE(LONG _UfoAddr),LONG       !+50h Возвращает кол-во элементов в первом измерении массива
-_Size                  PROCEDURE(LONG _UfoAddr),LONG       !+54h Возвращает полный размер переменной (области памяти), на которую ссылается данный UFO-обьект
+Pop                    PROCEDURE(LONG _UfoAddr)            !+10h РџСЂРёСЃРІРѕРёС‚СЊ Р·РЅР°С‡РµРЅРёРµ СЃРѕ СЃС‚СЂРѕРєРѕРІРѕРіРѕ СЃС‚РµРєР°
+Push                   PROCEDURE(LONG _UfoAddr)            !+14h РџРѕРјРµСЃС‚РёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РЅР° СЃС‚СЂРѕРєРѕРІС‹Р№ СЃС‚РµРє
+DPop                   PROCEDURE(LONG _UfoAddr)            !+18h РџСЂРёСЃРІРѕРёС‚СЊ Р·РЅР°С‡РµРЅРёРµ СЃ DECIMAL-СЃС‚РµРєР°
+DPush                  PROCEDURE(LONG _UfoAddr)            !+1Ch РџРѕРјРµСЃС‚РёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РЅР° DECIMAL-СЃС‚РµРє
+_Real                  PROCEDURE(LONG _UfoAddr),REAL       !+20h Р’РѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РІ РІРёРґРµ REAL-Р·РЅР°С‡РµРЅРёСЏ
+_Long                  PROCEDURE(LONG _UfoAddr),LONG       !+24h Р’РѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РІ РІРёРґРµ LONG-Р·РЅР°С‡РµРЅРёСЏ
+_Free                  PROCEDURE(LONG _UfoAddr)            !+28h Р•СЃР»Рё РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚ СЃСЃС‹Р»Р°РµС‚СЃСЏ РЅР° РѕР±Р»Р°СЃС‚СЊ РґРёРЅР°РјРёС‡РµСЃРєРѕР№ РїР°РјСЏС‚Рё, С‚Рѕ РѕРЅР° РѕСЃРІРѕР±РѕР¶РґР°РµС‚СЃСЏ. Р’ Р»СЋР±РѕРј СЃР»СѓС‡Р°Рµ РѕР±РЅСѓР»СЏРµС‚ Р°РґСЂРµСЃ РїР°РјСЏС‚Рё, РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚.
+_Clear                 PROCEDURE                           !+2Ch РћС‡РёС‰Р°РµС‚ РїРµСЂРµРјРµРЅРЅСѓСЋ, РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
+_Address               PROCEDURE(LONG _UfoAddr),LONG       !+30h Р’РѕР·РІСЂР°С‰Р°РµС‚ Р°РґСЂРµСЃ РїРµСЂРµРјРµРЅРЅРѕР№ (РѕР±Р»Р°СЃС‚Рё РїР°РјСЏС‚Рё) РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
+AssignLong             PROCEDURE                           !+34h РџСЂРёСЃРІРѕРёС‚СЊ LONG-Р·РЅР°С‡РµРЅРёРµ
+AssignReal             PROCEDURE                           !+38h РџСЂРёСЃРІРѕРёС‚СЊ REAL-Р·РЅР°С‡РµРЅРёРµ
+AssignUFO              PROCEDURE                           !+3Ch РџСЂРёСЃРІРѕРёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РґСЂСѓРіРѕРіРѕ UFO-РѕР±СЊРєС‚Р°
+AClone                 PROCEDURE(LONG _UfoAddr),LONG       !+40h Р’РѕР·РІСЂР°С‰Р°РµС‚ РєР»РѕРЅ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р°
+Select                 PROCEDURE                           !+44h Р”Р»СЏ РјР°СЃСЃРёРІРѕРІ Рё СЃС‚СЂРѕРє СЂР°РІРЅРѕР·РЅР°С‡РЅРѕ _Var[Ptr]
+Slice                  PROCEDURE                           !+48h Р”Р»СЏ СЃС‚СЂРѕРє СЂР°РІРЅРѕР·РЅР°С‡РЅРѕ _Var[Ptr1:Ptr2]
+Designate              PROCEDURE                           !+4Ch Р’РѕР·РІСЂР°С‚ Р·Р°РїСЂРѕС€РµРЅРЅРѕРіРѕ РїРѕР»СЏ РіСЂСѓРїРїС‹ РІ РІРёРґРµ UFO-РѕР±СЊРµРєС‚Р°
+_Max                   PROCEDURE(LONG _UfoAddr),LONG       !+50h Р’РѕР·РІСЂР°С‰Р°РµС‚ РєРѕР»-РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РїРµСЂРІРѕРј РёР·РјРµСЂРµРЅРёРё РјР°СЃСЃРёРІР°
+_Size                  PROCEDURE(LONG _UfoAddr),LONG       !+54h Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»РЅС‹Р№ СЂР°Р·РјРµСЂ РїРµСЂРµРјРµРЅРЅРѕР№ (РѕР±Р»Р°СЃС‚Рё РїР°РјСЏС‚Рё), РЅР° РєРѕС‚РѕСЂСѓСЋ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
 BaseType               PROCEDURE(LONG _UfoAddr),LONG       !+58h
 DistinctUpper          PROCEDURE                           !+5Ch
 DistinctsUFO           PROCEDURE                           !+60h
 DistinctsLong          PROCEDURE                           !+64h
-Cleared                PROCEDURE(LONG _UfoAddr)            !+68h Уничтожен?
+Cleared                PROCEDURE(LONG _UfoAddr)            !+68h РЈРЅРёС‡С‚РѕР¶РµРЅ?
 IsNull                 PROCEDURE(LONG _UfoAddr),LONG       !+6Ch
 OEM2ANSI               PROCEDURE(LONG _UfoAddr)            !+70h
 ANSI2OEM               PROCEDURE(LONG _UfoAddr)            !+74h
-_Bind                  PROCEDURE(LONG _UfoAddr)            !+78h Биндование полей группы
+_Bind                  PROCEDURE(LONG _UfoAddr)            !+78h Р‘РёРЅРґРѕРІР°РЅРёРµ РїРѕР»РµР№ РіСЂСѓРїРїС‹
 _Add                   PROCEDURE                           !+7Ch
 Divide                 PROCEDURE                           !+80h
 Hash                   PROCEDURE(LONG _UfoAddr),LONG       !+84h Calc CRC
-SetAddress             PROCEDURE                           !+88h Задает адрес переменной (области памяти), на который будет ссылаться данный UFO-обьект
-Match                  PROCEDURE                           !+8Ch Сравнивает тип и размер поля, на которое ссылается данный UFO-обьект с полем из заданной ClassDesc-структуры
+SetAddress             PROCEDURE                           !+88h Р—Р°РґР°РµС‚ Р°РґСЂРµСЃ РїРµСЂРµРјРµРЅРЅРѕР№ (РѕР±Р»Р°СЃС‚Рё РїР°РјСЏС‚Рё), РЅР° РєРѕС‚РѕСЂС‹Р№ Р±СѓРґРµС‚ СЃСЃС‹Р»Р°С‚СЊСЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚
+Match                  PROCEDURE                           !+8Ch РЎСЂР°РІРЅРёРІР°РµС‚ С‚РёРї Рё СЂР°Р·РјРµСЂ РїРѕР»СЏ, РЅР° РєРѕС‚РѕСЂРѕРµ СЃСЃС‹Р»Р°РµС‚СЃСЏ РґР°РЅРЅС‹Р№ UFO-РѕР±СЊРµРєС‚ СЃ РїРѕР»РµРј РёР· Р·Р°РґР°РЅРЅРѕР№ ClassDesc-СЃС‚СЂСѓРєС‚СѓСЂС‹
 Identical              PROCEDURE                           !+90h
-Store                  PROCEDURE                           !+94h Помещает значение данного UFO-обьекта в заданную область памяти
+Store                  PROCEDURE                           !+94h РџРѕРјРµС‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ РґР°РЅРЅРѕРіРѕ UFO-РѕР±СЊРµРєС‚Р° РІ Р·Р°РґР°РЅРЅСѓСЋ РѕР±Р»Р°СЃС‚СЊ РїР°РјСЏС‚Рё
                     END
 UfoAddr             LONG,OVER(_Var)
 UFO_VMTPtr          &LONG
