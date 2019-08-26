@@ -1,5 +1,5 @@
 s  program  ! парсер ал€ YAML 
-            ! dee2019-08-17
+            ! dee2019-08-26
             ! dee2019-08-11
             ! dee2019-08-09
 
@@ -102,22 +102,24 @@ s  program  ! парсер ал€ YAML
 !      +f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC
 !      AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs=
 !
-!------на будующее--------
-!
-!ѕодпункт_массив: [1, 2, 3]
-!
 !—писки (последовательности, lists, sequences, collections) представл€ют собой коллекции 
 !упор€доченных данных, доступ к которым возможен по их индексам.
-!bindings:
-!  - ircEvent: PRIVMSG
-!    method: newUri
-!    regexp: '^http://.*'
-!  - ircEvent: PRIVMSG
-!    method: deleteUri
-!    regexp: '^delete.*'
-!  - ircEvent: PRIVMSG
-!    method: randomUri
-!    regexp: '^random.*'
+!
+!bindings
+!  - 
+!    ircEvent= PRIVMSG 1
+!    method= newUri
+!    regexp= '^http://.*'
+!  - 
+!    ircEvent= PRIVMSG 2
+!    method= deleteUri 
+!    regexp= '^delete.*'
+!  - 
+!    ircEvent= PRIVMSG 3
+!    method= randomUri
+!    regexp= '^random.*'
+!
+!------на будующее--------
 !-------------------------
 
   include('YAMLD.inc')
@@ -126,8 +128,10 @@ s  program  ! парсер ал€ YAML
   end 
 
 YD   &YAMLD
-
 S    string(255)
+S2   string(255)
+S3   string(255)
+
 
   code
   SYSTEM{prop:charset} = CHARSET:CYRILLIC
@@ -143,8 +147,8 @@ S    string(255)
   if YD.YAMLD_init('in_test2.cfg',,,)
      stop('ќшибка')
   else
-     S = 'M800x600/CashrepGetVcode/MenuScrollStyle/P4'
-     stop(S &'<13,10>'&  YD.YAMLD_Rcommand(S)  )
+     S = 'M800X600/CASHREPGETVCODE/MENUSCROLLSTYLE/P4'
+     stop(S &'<13,10>'&  clip(YD.YAMLD_Rcommand(S))  )
        
      S = 'TestTXT/Blob'
      stop(S &'<13,10>'&  YD.YAMLD_Rcommand(S)  )    
@@ -157,9 +161,29 @@ S    string(255)
      
      S = 'TestTXTRF/B64'
      stop(S &'<13,10>'&  YD.YAMLD_Rcommand(S)  )
-  end        
+     
+     S = 'bindings4/2/method'
+     stop(S &'<13,10>'&  YD.YAMLD_Rcommand(S)  )   
+     
+     DO GetItemDim
+  end 
 
 
+GetItemDim routine
+  !---получить размер индекса в массиве по заданному пути"
+  S = 'bindings4/'
+  z# = yd.YAMLD_GetIndex(S)
+  
+  !---обойдем все индексы
+  loop i#=1 to z#
+       S =  'bindings4/'& i# &'/ircEvent'
+       S2 = 'bindings4/'& i# &'/method'
+       S3 = 'bindings4/'& i# &'/regexp'
+       stop(clip(S)  &' = '&  clip(YD.YAMLD_Rcommand(S))  &'<13,10>'& |
+            clip(S2) &' = '&  clip(YD.YAMLD_Rcommand(S2)) &'<13,10>'& |
+            clip(S3) &' = '&  clip(YD.YAMLD_Rcommand(S3)) |
+           )
+  end
 
 
 

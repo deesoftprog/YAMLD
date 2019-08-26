@@ -1,6 +1,6 @@
 !-----------------------------
 ! YAMLD –еализаци€ чтение конфигурации из файла в формате ал€ YAMLD
-! dee2019-08-17
+! dee2019-08-26
 ! dee2019-08-11
 ! dee2019-08-09
 !-----------------------------
@@ -18,9 +18,14 @@ Parvalue            STRING(YAMLD_MaxLenFLDFile)      !«начение параметра
 Node                string(YAMLD_MaxLenFLD)          !цепочка поиска(им€1/им€2/им€3)
 Value               string(YAMLD_MaxLenFLDValue)     !значение параметра
                     end
+YAMLD_DimQ_TYPE     QUEUE,pre(YAMLD_DimQ_TYPE),THREAD,TYPE  !размерности dim
+size                long                             !размер
+Node                string(YAMLD_MaxLenFLD)          !цепочка поиска(им€1/им€2/им€3)
+                    end
                    
 YAMLD               Class,Type,Module('YAMLD.clw'),Link('YAMLD.clw'),THREAD
 YAMLD_cfgQ          &YAMLD_cfgQ_TYPE,protected
+YAMLD_DimQ          &YAMLD_DimQ_TYPE,protected
 YAMLD_SepFld        string(1),protected
 YAMLD_Comment       string(1),protected
 p_debug             byte,protected
@@ -29,6 +34,7 @@ Destruct            Procedure(),Private
 !---–абочие метолы
 YAMLD_Rcommand      Procedure(string _param),string                         !получить значение параметра или ветки
 YAMLD_Scommand      Procedure(string _param, string _value),long,proc       !задать значение параметра или ветки RC=1 найден RC=0 не найден
+YAMLD_GetIndex      procedure(string _param),long                           !получить размер массива элементов тегов "-"
 YAMLD_init          procedure(String _InFile,<string _Sep>,<string _SComment>,byte _debug=0),long            !инициализаци€ файла YAML с заданным сепаратором полей
 !---—лужебные
 YAMLD_GetFieldp     Procedure(String Stro, Short Num, String Sep, <Byte QuoteFlag>),String,Private
@@ -150,4 +156,17 @@ YAMLD_xIsDimSize    Procedure(*? _Var),long,Private
 !     MenuTypeID = 2
 !     StrJson = {key1: "value1", key2: "value2"} 
 !     323224 = 7777
+!bindings
+!  - 
+!    ircEvent= PRIVMSG
+!    method= newUri
+!    regexp= '^http://.*'
+!  - 
+!    ircEvent= PRIVMSG
+!    method= deleteUri
+!    regexp= '^delete.*'
+!  - 
+!    ircEvent= PRIVMSG
+!    method= randomUri
+!    regexp= '^random.*'
 !-------------------

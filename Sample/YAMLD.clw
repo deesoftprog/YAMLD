@@ -1,6 +1,6 @@
 !-----------------------------
 ! YAMLD –еализаци€ чтение конфигурации из файла в формате ал€ YAMLD
-! dee2019-08-17
+! dee2019-08-26
 ! dee2019-08-11
 ! dee2019-08-09
 !-----------------------------
@@ -13,6 +13,7 @@
 YAMLD.Construct    Procedure()
                    Code
                    self.YAMLD_cfgQ &= new YAMLD_cfgQ_TYPE
+                   self.YAMLD_DimQ &= new YAMLD_DimQ_TYPE
                    Return
 !****************************************************************************************************
 YAMLD.Destruct     Procedure()
@@ -20,6 +21,10 @@ YAMLD.Destruct     Procedure()
                    if ~(Self.YAMLD_cfgQ &= null)
                       DISPOSE(Self.YAMLD_cfgQ)
                       Self.YAMLD_cfgQ &= Null
+                   end
+                   if ~(Self.YAMLD_DimQ &= null)
+                      DISPOSE(Self.YAMLD_DimQ)
+                      Self.YAMLD_DimQ &= Null
                    end
                    Return
 !****************************************************************************************************     
@@ -69,6 +74,19 @@ RetC               long
                    retC += self.YAMLD_CfgDeSerelize()
                    retC += self.YAMLD_CfgHeirs()
                    Return(retC)
+!****************************************************************************************************
+YAMLD.YAMLD_GetIndex   procedure(string _param)
+                   !---ѕолучить размер массива элементов тегов "-"
+                   code
+                   if records(self.YAMLD_DimQ)
+                      self.YAMLD_DimQ.Node = clip(upper(_param))
+                      get(self.YAMLD_DimQ,+self.YAMLD_DimQ.Node)
+                      if errorcode()
+                         clear(self.YAMLD_DimQ.size)
+                      else
+                      end
+                   end
+                   return(self.YAMLD_DimQ.size)
 !****************************************************************************************************
 YAMLD.YAMLD_GetFieldp  Procedure(String Stro, Short Num, String Sep, <Byte QuoteFlag>)
 bpoz                SHORT,auto
@@ -199,17 +217,20 @@ fl_Heits            long
 fl_MultiStr         long
 fl_MultiStrType     byte
 fl_json             byte
+fl_dim              byte
 LastNode            like(self.YAMLD_cfgQ.Node),dim(255)
 LastParent          long
 LastHeits           long
 LastMultiStr        long
 LastJson            long
+LastDim             long
 SEP_D               string(1)
                     MAP
                        GetPathNode(long _parent),string  !получить путь поиска элемента
                        isParentHeirs(string _value),long !получить код наследуемой группы родител€  
                        isParentMultiStr(string _value),long !получить код наследуемой группы родител€  
                        isParentJson(string _value),long !получить код наследуемой группы родител€  
+                       isParentDim(string _value),long !получить код наследуемой группы родител€  
                     end
 Ndx_J               long
                     code
@@ -221,16 +242,12 @@ Ndx_J               long
                             get(self.YAMLD_cfgQ,Ndx_J)
                             if self.YAMLD_cfgQ.Indent=1
                                fl_root = true
-                               fl_parent=1
-                               LastParent=1
+                               fl_parent=1;     LastParent=1
                                !---
-                               fl_Heits=0
-                               LastHeits=0
-                               fl_MultiStr=0
-                               LastMultiStr=0
-                               fl_MultiStrType=0
-                               fl_json=0
-                               LastJson=0
+                               fl_Heits=0;      LastHeits=0
+                               fl_MultiStr=0;   LastMultiStr=0;   fl_MultiStrType=0
+                               fl_json=0;       LastJson=0
+                               fl_Dim=0;        LastDim=0
                                !---
                                clear(LastNode)
                             elsif self.YAMLD_cfgQ.Indent>1
@@ -258,6 +275,11 @@ Ndx_J               long
                                end 
                                LastJson = fl_Json
                                !---
+                               if fl_Dim=0
+                                  fl_Dim = isParentDim(clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,1,SEP_D,0))))
+                               end 
+                               LastDim = fl_Dim
+                               !---
                                put(self.YAMLD_cfgQ)
                                fl_root = FALSE
                             elsif fl_parent
@@ -281,6 +303,11 @@ Ndx_J               long
                                      if Lastjson = fl_json          !возвратились на предыдущий уровен сбрасываем
                                         fl_json = 0
                                         Lastjson = 0
+                                     end
+                                     !---
+                                     if LastDim = fl_Dim            !возвратились на предыдущий уровен сбрасываем
+                                        fl_Dim = 0
+                                        LastDim = 0
                                      end
                                      !---
                                      self.YAMLD_cfgQ.Node = clip(GetPathNode(fl_parent)) &'/'& self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
@@ -311,6 +338,13 @@ Ndx_J               long
                                      self.YAMLD_cfgQ.HeirsParent = fl_Json
                                   end
                                   !---
+                                  if fl_Dim=0
+                                     fl_Dim = isParentDim(clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,1,SEP_D,0))))
+                                     LastDim = fl_Dim
+                                  else
+                                     self.YAMLD_cfgQ.HeirsParent = fl_Dim
+                                  end
+                                  !---
                                else
                                   LastNode[fl_parent] = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                   self.YAMLD_cfgQ.Node = clip(GetPathNode(LastParent)) &'/'& self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
@@ -330,6 +364,13 @@ Ndx_J               long
                                      self.YAMLD_cfgQ.HeirsParent = fl_MultiStr
                                   end 
                                   !---ƒл€ json секци€ отсутствует
+                                  !---
+                                  if fl_Dim=0
+                                     fl_Dim = isParentDim(clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,1,SEP_D,0))))
+                                     LastDim = fl_Dim
+                                  else
+                                     self.YAMLD_cfgQ.HeirsParent = fl_Dim
+                                  end 
                                   !---
                                end
                                put(self.YAMLD_cfgQ)
@@ -394,6 +435,16 @@ PozE                long
                        RetI = self.YAMLD_cfgQ.id
                     end
                     return(RetI)
+                    
+isParentDim         PROCEDURE(string _value) !получить код наследуемой группы родител€ 
+TmpS                string(YAMLD_MaxLenFLD)
+RetI                long
+                    code
+                    TmpS = _value
+                    if val(TmpS[1 : 1]) = 45 !'-'
+                       RetI = self.YAMLD_cfgQ.id
+                    end
+                    return(RetI)
 !****************************************************************************************************
 YAMLD.YAMLD_CfgHeirs Procedure                                
                     !---2 этап обработки (обработка наследовани€)
@@ -403,7 +454,7 @@ Temp_cfgQ           QUEUE(self.YAMLD_cfgQ),pre(tcfgq1)
 Rec_cfgQ            group(self.YAMLD_cfgQ),pre(tcfgq2)
                     end
 Temp_ParentQ        QUEUE
-Type                   byte          !1-ссылки 2-родитель 3-ћультиЋайн 4-json
+Type                   byte          !1-ссылки 2-родитель 3-ћультиЋайн 4-json 5-Dim
 MultiLineType          byte          !1-(ћультиЋайн без сохранени€ перевода строк) 2-с сохранением
 Format                 byte          !0-txt 1-Base64
 HeirsParent            long          !парент наследника ID
@@ -421,11 +472,13 @@ StrIn               string(YAMLD_MaxLenFLDValue)
 FindValue           string(YAMLD_MaxLenFLD)
 FindHeirsParent     long
 SaveNode            like(self.YAMLD_cfgQ.Node)
+SaveIndent          long
 Ndx_J               long
 Ndx_J2              long
 Ndx_J3              long
 Ndx_J4              long
 Flfind              byte
+FlEnim              long
                     code
                     SEP_D = self.YAMLD_SepFld
                     loop Ndx_J=1 to records(self.YAMLD_cfgQ)
@@ -453,7 +506,7 @@ Flfind              byte
                                Temp_ParentQ.id = self.YAMLD_cfgQ.id
                                Temp_ParentQ.Parvalue = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
                                Temp_ParentQ.Value    = clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,2,SEP_D,0)))
-                               Temp_ParentQ.Type = 1         !1-ссылки
+                               Temp_ParentQ.Type = 1           !1-ссылки
                                add(Temp_ParentQ)
                             of 124 !'|'
                                clear(Temp_ParentQ)
@@ -488,7 +541,29 @@ Flfind              byte
                                Temp_cfgQ :=: self.YAMLD_cfgQ
                                Temp_cfgQ.HeirsParent = self.YAMLD_cfgQ.id
                                add(Temp_cfgQ)
-                               !---                               
+                               !--- 
+                            end
+                            !---Dim
+                            case val(self.YAMLD_cfgQ.Parvalue[1 : 1])
+                            of 45  !'-'
+                               SaveIndent = self.YAMLD_cfgQ.Indent
+                               clear(Temp_ParentQ)
+                               Temp_ParentQ.id = self.YAMLD_cfgQ.id
+                               Temp_ParentQ.Parvalue = self.YAMLD_GetFieldp(upper(CLIP(self.YAMLD_cfgQ.Parvalue)),1,SEP_D,0)
+                               Temp_ParentQ.Value    = clip(left(self.YAMLD_GetFieldp(self.YAMLD_cfgQ.Parvalue,2,SEP_D,0)))
+                               Temp_ParentQ.Type = 5         !5-Dim
+                               add(Temp_ParentQ)
+                            else
+                               !---проверка на завершение блока
+                               if SaveIndent > self.YAMLD_cfgQ.Indent
+                                  clear(Temp_ParentQ)
+                                  Temp_ParentQ.id = self.YAMLD_cfgQ.id
+                                  Temp_ParentQ.Parvalue = '@'
+                                  Temp_ParentQ.Value    = '@'
+                                  Temp_ParentQ.Type = 0
+                                  add(Temp_ParentQ)
+                               end
+                               !---
                             end
                          end
                     end
@@ -507,6 +582,13 @@ Flfind              byte
                        end
                        loop Ndx_J=1 to records(Temp_ParentQ)
                             get(Temp_ParentQ,Ndx_J)
+                            if ~val(Temp_ParentQ.Value[1 : 1]) = 45 and |  !'-'
+                               (Temp_ParentQ.Type=5 or Temp_ParentQ.Type=2)
+                            else
+                               !---если не список то сбросим нумератор массива
+                               FlEnim=0
+                            end
+                            !---
                             case Temp_ParentQ.Type
                             of 2     !2-родитель
                                FindValue = Temp_ParentQ.Value[2 : len(Temp_ParentQ.Value)]
@@ -520,19 +602,74 @@ Flfind              byte
                                FindValue = Temp_ParentQ.Value[1 : 1]
                                FindHeirsParent = Temp_ParentQ.id
                                do fillJson
+                            of 5     !5-Dim
+                               FindValue = Temp_ParentQ.Parvalue[1 : 1]
+                               FindHeirsParent = Temp_ParentQ.id
+                               do fillDim
                             end
                        end
                        !---
                     end
                     !---DEBUG---
                     if self.p_debug
-                       self.YAMLD_LoggerQ('Temp_ParentQ',Temp_ParentQ)
                        self.YAMLD_LoggerQ('Temp_cfgQ',Temp_cfgQ)
+                       self.YAMLD_LoggerQ('Temp_ParentQ',Temp_ParentQ)
+                       self.YAMLD_LoggerQ('self.YAMLD_DimQ',self.YAMLD_DimQ)
                        self.YAMLD_LoggerQ('self.YAMLD_cfgQ',self.YAMLD_cfgQ)
                     end
                     !---
                     return(0)
-                    
+!-------------
+fillDim             ROUTINE  !перенос ссылок
+                    loop Ndx_J2=1 to records(Temp_ParentQ)
+                         get(Temp_ParentQ,Ndx_J2)
+
+                         if Temp_ParentQ.Type=5 and |        !5-Dim
+                            clip(Temp_ParentQ.Parvalue[1 : 1]) = clip(FindValue) |
+                            and Temp_ParentQ.id = FindHeirsParent
+
+                            self.YAMLD_cfgQ.id = Temp_ParentQ.id
+                            get(self.YAMLD_cfgQ,+self.YAMLD_cfgQ.id)
+                            if ~errorcode()
+                               clear(Rec_cfgQ)
+                               SaveNode = self.YAMLD_cfgQ.Node
+                               Rec_cfgQ :=: self.YAMLD_cfgQ
+                               FlEnim+=1             !нумератор индекса массива
+                               do FillChildDim
+                            end
+                         end
+                    end
+ 
+FillChildDim        ROUTINE   !добавление в Q поиска
+                    loop Ndx_J3=1 to records(Temp_cfgQ)
+                         get(Temp_cfgQ,Ndx_J3)
+                         if Temp_cfgQ.HeirsParent = FindHeirsParent
+                            self.YAMLD_cfgQ :=: Rec_cfgQ 
+                            self.YAMLD_cfgQ.Value = Temp_cfgQ.Value
+                            !---построим правильную ссылку
+                            SaveNode = SaveNode[1 : len(clip(SaveNode))-1] & FlEnim
+                            self.YAMLD_cfgQ.Node  = clip(SaveNode) & Temp_cfgQ.Node[ |
+                                                   instring('/',Temp_cfgQ.Node,|
+                                                                            -1,|
+                                                              len(Temp_cfgQ.Node)) : len(Temp_cfgQ.Node)]
+                            self.YAMLD_cfgQ.Value = Temp_cfgQ.Value
+                            add(self.YAMLD_cfgQ)
+                            
+                            !---сохраним размер индекса массива
+                            self.YAMLD_DimQ.Node = SaveNode[1 : len(clip(SaveNode))-1]
+                            get(self.YAMLD_DimQ,+self.YAMLD_DimQ.Node)
+                            if errorcode()
+                               self.YAMLD_DimQ.Node = SaveNode[1 : len(clip(SaveNode))-1]
+                               self.YAMLD_DimQ.size = FlEnim
+                               add(self.YAMLD_DimQ)
+                            else
+                               self.YAMLD_DimQ.size = FlEnim
+                               put(self.YAMLD_DimQ)
+                            end
+                            !---
+                         end
+                    end
+!-------------
 fillJson            ROUTINE   !обработка массива Json
                     loop Ndx_J2=1 to records(Temp_ParentQ)
                          get(Temp_ParentQ,Ndx_J2)
@@ -571,7 +708,7 @@ FillJsonItem        ROUTINE   !добавление в Q поиска
                             end
                          end
                     end
-  
+!-------------
 fillLinks           ROUTINE  !перенос ссылок
                     loop Ndx_J2=1 to records(Temp_ParentQ)
                          get(Temp_ParentQ,Ndx_J2)
@@ -605,7 +742,7 @@ FillChild           ROUTINE   !добавление в Q поиска
                             add(self.YAMLD_cfgQ)
                          end
                     end
-  
+!-------------
 fillMultiLine       ROUTINE  !обход строк мультилайн блока
                     loop Ndx_J2=1 to records(Temp_ParentQ)
                          get(Temp_ParentQ,Ndx_J2)
@@ -659,7 +796,7 @@ FillChildMultiLine  ROUTINE   !объединение строк мультилайн блоков
                        end
                        put(self.YAMLD_cfgQ)
                     end
-                    
+!-------------
 FillJsonType        ROUTINE   !получение списка параметров из Json строки
                     free(QKeyPar)
                     StrIn =  self.YAMLD_cfgQ.Value  !'{{key1: "value1", key2: "value2"}'
